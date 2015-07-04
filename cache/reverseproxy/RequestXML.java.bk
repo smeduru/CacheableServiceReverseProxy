@@ -1,0 +1,72 @@
+package cache.reverseproxy;
+
+import java.io.ByteArrayOutputStream;
+import javax.xml.transform.Result;
+import javax.xml.transform.Source;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.sax.SAXSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.xml.sax.Attributes;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.XMLReader;
+import org.xml.sax.helpers.XMLFilterImpl;
+import org.xml.sax.helpers.XMLReaderFactory;
+
+public class RequestXML {
+	public static void main(String[] args) throws Exception {
+        XMLReader xr = new XMLFilterImpl(XMLReaderFactory.createXMLReader()) {
+            private boolean skip;
+            private String skipElement;
+
+            @Override
+            public void startElement(String uri, String localName, String qName, Attributes atts)
+                    throws SAXException {
+            	if (skip) { 
+            		return;
+            	}
+            	
+                if (isSkipNode(qName)) {
+                    skip = true;
+                    skipElement = qName;
+                    return;
+                }
+                super.startElement(uri, localName, qName, atts);
+            }
+
+            public void endElement(String uri, String localName, String qName) throws SAXException {
+                if (skip && qName.equals(skipElement)) {
+                	skip = false;
+                	skipElement = null;
+                }
+                else if (!skip) {
+                	super.endElement(uri, localName, qName);
+                }
+            }
+
+            @Override
+            public void characters(char[] ch, int start, int length) throws SAXException {
+                if (!skip) {
+                    super.characters(ch, start, length);
+                }
+            }
+        };
+        
+        Source src = new SAXSource(xr, new InputSource("c:/tmp10/request.xml"));
+        ByteArrayOutputStream bo = new ByteArrayOutputStream();
+        Result res = new StreamResult(bo);
+        TransformerFactory.newInstance().newTransformer().transform(src, res);
+        System.out.println("==================");
+        System.out.println(bo.toString());
+    }
+	
+	private static boolean isSkipNode(String node) {
+		if ("partnerId".equals(node) || "requestId".equals(node) || "partnerTimestamp".equals(node)
+				|| "partnerSessionId".equals(node) || "partnerTransactionId".equals(node)
+				|| "manualMemoText".equals(node) || "systemMemoText".equals(node) || "parameterValue".equals(node)) {
+			return true;
+		}
+		return false;
+	}
+}

@@ -31,7 +31,9 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
+import org.apache.commons.io.Charsets;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.Consts;
 import org.apache.http.Header;
@@ -43,6 +45,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.io.DefaultHttpRequestParser;
 import org.apache.http.impl.io.DefaultHttpResponseParser;
 import org.apache.http.io.SessionInputBuffer;
+import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 
 /**
@@ -52,6 +55,7 @@ public class CachedResponseParser {
 	private static class GenericHttpResponse {
 		String headers;
 		String entity;
+		String encoding;
 	}
 
 	public static GenericHttpResponse getResponse(String fileName, boolean isSoap) throws IOException {
@@ -72,10 +76,17 @@ public class CachedResponseParser {
 	    while (line != null) {
 	    	if (!isFirst  && !isHeadRetrieved) {
 	    		fileContents.append("\r\n");
+	    		if (line != null) {
+		    		String ucaseLine = line.toUpperCase();
+		    		if (ucaseLine.indexOf("CONTENT-TYPE") > -1 && ucaseLine.indexOf(HTTP.UTF_8) > -1) {
+		    			response.encoding = HTTP.UTF_8;
+		    		}   	
+	    		}
 	    	}
 	    	if (!isFirst || !"".equals(line)) {
 	    		fileContents.append(line);
 	    	}
+	    	
 	    	
     		isFirst = false;
 	    	line = br.readLine();
@@ -106,7 +117,7 @@ public class CachedResponseParser {
 		String fileDir = ProxyConfig.getOutputDir(isSoap);
 		File file = new File(fileDir + "/" + fileName);
 		if (!file.exists()) {
-			FileUtils.writeStringToFile(file, request);
+			FileUtils.writeStringToFile(file, request); //, Charsets.UTF_8
 		}
 	}
 	
@@ -120,7 +131,13 @@ public class CachedResponseParser {
         
         final HttpResponse httpresponse = parser.parse();
         if (genericResponse.entity != null)  {
-        	HttpEntity entity = new StringEntity(genericResponse.entity);
+        	HttpEntity entity = null; 
+        	if (genericResponse.encoding != null) {
+        		entity = new StringEntity(genericResponse.entity, genericResponse.encoding);	
+        	}
+        	else {
+        		entity = new StringEntity(genericResponse.entity);	        		
+        	}
         	httpresponse.setEntity(entity);
         }
         

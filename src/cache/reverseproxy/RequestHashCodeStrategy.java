@@ -32,8 +32,7 @@ public class RequestHashCodeStrategy {
 		});
 		request.setHeaders(allheaders);
 		
-        Header soapActionHeader = request.getFirstHeader("SOAPAction");
-        cacheableRequest.setSoapHeaderContext(soapActionHeader);
+        Header soapActionHeader = cacheableRequest.getSoapActionHeader();
 		
         for (Header header : request.getAllHeaders()) {
 			 if (header.getName().equals("Content-Type")) {

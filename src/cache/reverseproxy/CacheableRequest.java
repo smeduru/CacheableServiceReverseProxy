@@ -10,6 +10,7 @@ import javax.xml.transform.stream.StreamResult;
 
 import org.apache.http.Header;
 import org.apache.http.HttpRequest;
+import org.apache.http.message.BasicHeader;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -59,6 +60,8 @@ public class CacheableRequest {
 //        respFileExtension = method + length + "." + respContentType;
         respFileExtension = method + "." + respContentType;
         
+        setSoapActionHeader();
+		
         try {
         	// Filter SOAP Content based 
             soapContentFilter = new XMLFilterImpl(XMLReaderFactory.createXMLReader()) {
@@ -126,8 +129,16 @@ public class CacheableRequest {
 		this.context = context;
 	}
 	
-	public void setSoapHeaderContext(Header header) {
-		this.soapActionHeader = header;
+	public void setSoapActionHeader() {
+		Header header = httpRequest.getFirstHeader("SOAPAction");
+		if (header != null) {
+			String value = header.getValue();
+			int idx = value.lastIndexOf('/');
+			if (idx != -1) {
+				value = value.substring( idx + 1);
+			}
+			this.soapActionHeader = new BasicHeader(header.getName(), value);
+		}
 	}
 	
 	public String getSoapAction() {
@@ -135,6 +146,10 @@ public class CacheableRequest {
 			return soapActionHeader.getValue();
 		}
 		return "";
+	}
+	
+	public Header getSoapActionHeader() {
+		return soapActionHeader;
 	}
 	
 	public String getRequestPrefix() {
